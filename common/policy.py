@@ -1,27 +1,102 @@
 import random
-from typing import List
-
-def policy_random(actions: List[str]) -> List[str]:
-    """
-    各行動候補の行動確率をランダムに設定する
-
-    Returns:
-        各行動ごとの、選択される確率(list[str])
-    """
-    action_probs = [random.random() for _ in actions]
-    return action_probs
+from typing import List, Dict, Tuple
 
 
-def policy_select_max_value(actions: List[str]) -> List[str]:
-    """
-    各行動候補の行動確率を、最も価値が高いものを1に、それ以外を0に設定する。
+class Policy:
+    def get_random_probs(self, actions: List[str]) -> List[float]:
+        """
+        行動ごとに、ランダムな確率（足して1になるように正規化済み）を割り当てる関数。
 
-    Returns:
-        各行動ごとの、選択される確率(list[str])
-    """
-    action_probs = [0] * len(actions)
-    # 行動ごとに価値を求める
+        Args:
+            actions:
+                行動のリスト
 
-    # 価値が最も高い行動を1, それ以外を0にした配列を返す
+        Returns:
+            action_probs:
+                行動ごとの実行確率
+        """
+        # 行動ごとに、ランダムな確率を設定
+        random_list: List[float] = [random.random() for _ in actions]
 
-    return action_probs
+        # 足して1になるように正規化
+        total: float = sum(random_list)
+        action_probs: List[float] = [r / total for r in random_list]
+
+        return action_probs
+
+
+    def get_max_value_probs(
+        self,
+        current_state: Tuple[int, int],
+        actions: List[str],
+        Q: Dict[Tuple[int, int], Dict[str, float]],
+    ) -> List[float]:
+        """
+        価値が最大の行動を1.0, それ以外を0.0とする行動確率を返す関数
+
+        Args:
+            Q:
+                Qテーブル
+            current_state:
+                現在の状態
+            actions:
+                行動候補
+
+        Returns:
+            action_probs:
+                行動ごとの実行確率
+        """
+
+        # 現在の状態で、最も価値の高い行動を選択
+        q_current_state: Dict[str, float] = Q[current_state]
+        max_q_action: str = max(q_current_state, key=q_current_state.get)
+
+        # 行動価値が高いインデックスを1.0に、それ以外を0.0にしたリストを生成
+        action_probs = [0.0] * len(actions)
+        idx = actions.index(max_q_action)
+        action_probs[idx] = 1.0
+
+        return action_probs
+
+
+    def epsilon_greedy(
+        self,
+        current_state: Tuple[int, int],
+        actions: List[str],
+        Q: Dict[Tuple[int, int], Dict[str, float]],
+        epsilon: float=0.8
+    ) -> List[float]:
+        """
+        各行動ごとに、行動確率を決定する関数
+
+        Args:
+            state:
+                現在の状態
+            actions:
+                行動のリスト
+            Q:
+                ある状態(座標)において、行動を取ったときの評価値。
+                例.
+                    Q = {
+                        (1, 1): {'up': 0.2, 'down': 0.3, 'left': 0.1, 'right': 0.5},
+                        ...
+                    }
+            epsilon:
+                探索, 活用の割合
+
+        Returns:
+            action_probs:
+                行動ごとの実行確率
+        """
+        # 探索
+        if random.random() <= epsilon:
+            # ランダムな確率を設定
+            return self.get_random_probs(actions)
+        # 活用
+        else:
+            if (current_state in Q) and sum(Q[current_state].values()) != 0:
+                # 現在の状態で、最も価値の高い行動を選択
+                return self.get_max_value_probs(current_state, actions, Q)
+            else:
+                # ランダムな確率を設定
+                return self.get_random_probs(actions)

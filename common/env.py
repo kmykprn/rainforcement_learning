@@ -25,7 +25,7 @@ class EnvRanks:
                 [-2, -2, -2, -2, -2, -2],
                 [-2,  0,  0,  0,  0, -2],
                 [-2,  0, -2,  0,  0, -2],
-                [-2,  0,  0, -1,  1, -2],
+                [-2,  0,  0, -1,  10, -2],
                 [-2, -2, -2, -2, -2, -2],
             ]
 
@@ -43,3 +43,35 @@ class EnvRanks:
         row = new_state[0]
         col = new_state[1]
         return self.ranks[row][col]
+
+    @staticmethod
+    def get_new_state_pos(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
+        """
+        行動に基づき、次の状態を取得
+
+        Args:
+            current_state:
+                現在の状態（座標）
+            action:
+                行動
+
+        Returns:
+            new_state:
+                新たな状態（座標）
+
+        """
+        row = current_state[0]
+        col = current_state[1]
+
+        if action == 'up':
+            row -= 1
+        if action == 'down':
+            row += 1
+        if action == 'left':
+            col -= 1
+        if action == 'right':
+            col += 1
+
+        new_state: Tuple[int, int] = (row, col)
+
+        return new_state

@@ -1,4 +1,4 @@
-def G(t: int, T: int) -> int | float:
+def V(t: int, T: int) -> int | float:
     """
     現在の時刻（ステップ）における報酬の総和を計算する
 
