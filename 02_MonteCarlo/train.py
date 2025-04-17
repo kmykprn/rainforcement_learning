@@ -4,12 +4,15 @@
 
 import random
 import pickle
+import yaml
+import sys
+import os
 
 from common.env import EnvRanks
 from common.policy import Policy
-
-
 from typing import List, Tuple, Dict, TypedDict
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class Experience(TypedDict):
@@ -203,8 +206,11 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
             Qテーブル
     """
 
-    # スタート地点
+    # スタート地点を定義
     state: Tuple[int, int] = (2, 1)
+
+    # 通過した座標を記録
+    path_through: List[Tuple[int, int]] = [state]
 
     # 価値最大の行動を行なっても、ゴールに到達しない場合があるので、50試行で打ち止め
     for _ in range(50):
@@ -216,7 +222,9 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
 
         # ゴールに到達した場合
         if r == GOAL_REWARD:
+            path_through.append(next_state)
             print(f"学習回数: {count}回, 成功!")
+            print(f"経路：{path_through}")
             return
         # 壁で停止した場合
         elif r == WALL_REWARD:
@@ -224,6 +232,7 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
             return
         # 進む
         else:
+            path_through.append(next_state)
             state = next_state
 
     # 上記のいずれでも終了しなかった場合（未到達）
@@ -293,12 +302,20 @@ def main(
 
 if __name__ == "__main__":
 
-    ENV = EnvRanks()  # 環境を定義
-    ACTIONS: List[str] = ["up", "down", "left", "right"]  # 行動リストを定義
+    # 設定ファイルを読み込み
+    with open("02_MonteCarlo/config.yaml", "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
 
-    MAX_EPISODE_SIZE = 30  # エピソードの回数（=学習回数）を定義
-    GOAL_REWARD = 10
-    WALL_REWARD = -2
+    # 環境を定義
+    ENV = EnvRanks()
+    GOAL_REWARD: int = config["env"]["goal_reward"]
+    WALL_REWARD: int = config["env"]["wall_reward"]
+
+    # 行動リストを定義
+    ACTIONS: List[str] = config["actions"]
+
+    # エピソードの回数（=学習回数）を定義
+    MAX_EPISODE_SIZE: int = config["learning"]["max_episode_size"]
 
     # Q値を初期化
     Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q()
