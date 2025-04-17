@@ -204,7 +204,7 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
     """
 
     # スタート地点
-    state: Tuple[int, int] = (1, 1)
+    state: Tuple[int, int] = (2, 1)
 
     # 価値最大の行動を行なっても、ゴールに到達しない場合があるので、50試行で打ち止め
     for _ in range(50):
