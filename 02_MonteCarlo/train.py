@@ -178,7 +178,8 @@ def update_Q_montecarlo(
     for i, x in enumerate(experiences):
         s, a = x["state"], x["action"]
 
-        # alphaを定義。1 /  ある状態である行動が行なわれた回数。
+        # alphaを定義。1 /  状態sで行動aを取った回数。
+        # 報酬の期待値（平均値）を求めるために使用。逐次平均を取る。
         sa = (s, a)
         N[sa] += 1
         alpha = 1 / N[sa]
