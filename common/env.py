@@ -6,7 +6,7 @@ class EnvRanks:
     行列形式の環境と、環境に基づく報酬関数を定義
     """
 
-    def __init__(self, ranks: List[List[int]]=None):
+    def __init__(self, ranks: List[List[int]] = None):
         """
         環境の行列を定義
 
@@ -23,9 +23,9 @@ class EnvRanks:
         else:
             self.ranks = [
                 [-2, -2, -2, -2, -2, -2],
-                [-2,  0,  0,  0,  0, -2],
-                [-2,  0, -2,  0,  0, -2],
-                [-2,  0,  0, -1,  10, -2],
+                [-2, 0, 0, 0, 0, -2],
+                [-2, 0, -2, 0, 0, -2],
+                [-2, 0, 0, -1, 10, -2],
                 [-2, -2, -2, -2, -2, -2],
             ]
 
@@ -45,7 +45,9 @@ class EnvRanks:
         return self.ranks[row][col]
 
     @staticmethod
-    def get_new_state_pos(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
+    def get_new_state_pos(
+        current_state: Tuple[int, int], action: str
+    ) -> Tuple[int, int]:
         """
         行動に基づき、次の状態を取得
 
@@ -58,18 +60,17 @@ class EnvRanks:
         Returns:
             new_state:
                 新たな状態（座標）
-
         """
         row = current_state[0]
         col = current_state[1]
 
-        if action == 'up':
+        if action == "up":
             row -= 1
-        if action == 'down':
+        if action == "down":
             row += 1
-        if action == 'left':
+        if action == "left":
             col -= 1
-        if action == 'right':
+        if action == "right":
             col += 1
 
         new_state: Tuple[int, int] = (row, col)
