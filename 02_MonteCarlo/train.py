@@ -17,6 +17,7 @@ class Experience(TypedDict):
     action: str
     reward: int
 
+
 def initialize_Q() -> Dict[Tuple[int, int], Dict[str, float]]:
     """
     全状態（座標）における、すべての行動確率を初期化
@@ -98,13 +99,13 @@ def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int
     row = current_state[0]
     col = current_state[1]
 
-    if action == 'up':
+    if action == "up":
         row -= 1
-    if action == 'down':
+    if action == "down":
         row += 1
-    if action == 'left':
+    if action == "left":
         col -= 1
-    if action == 'right':
+    if action == "right":
         col += 1
 
     new_state: Tuple[int, int] = (row, col)
@@ -112,13 +113,14 @@ def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int
     return new_state
 
 
-def calculate_G(rewards: List[int], gamma: float=0.99) -> List[float]:
+def calculate_G(rewards: List[int], gamma: float = 0.99) -> List[float]:
     """
     即時報酬の総和を求める関数
 
     Args:
         rewards:
-            エピソード終了までの、各ステップごとの即時報酬
+            エピソード終了までの即時報酬のリスト。
+            例えばrewards[t]には、s(t)ではなくs(t+1)の即時報酬が格納されている。
 
     Returns:
         G:
@@ -130,17 +132,17 @@ def calculate_G(rewards: List[int], gamma: float=0.99) -> List[float]:
     G: List[float] = [0.0] * T
     for t in range(T):
         g = 0.0
-        for k in range(T - t): # ← k = 0 〜 T - t - 1
+        for k in range(T - t):  # ← k = 0 〜 T - t - 1
             g += pow(gamma, k) * rewards[t + k]
         G[t] = g
     return G
 
 
 def update_Q_montecarlo(
-        experiences: List[Experience],
-        Q: Dict[Tuple[int, int], Dict[str, float]],
-        N: Dict[Tuple[Tuple[int, int], str], int],
-    ) -> Dict[Tuple[int, int], Dict[str, float]]:
+    experiences: List[Experience],
+    Q: Dict[Tuple[int, int], Dict[str, float]],
+    N: Dict[Tuple[Tuple[int, int], str], int],
+) -> Dict[Tuple[int, int], Dict[str, float]]:
     """
     「ある状態（座標）である行動（移動）をした」ときの、評価値を推定
 
@@ -166,15 +168,15 @@ def update_Q_montecarlo(
             行動確率が更新されたQテーブル
     """
 
-    # 状態ごとの即時報酬のリストを取得
-    rewards = [e['reward'] for e in experiences]
+    # 各状態における, 1時刻後の即時報酬のリストを取得
+    rewards = [e["reward"] for e in experiences]
 
     # 報酬の総和を計算
     G = calculate_G(rewards)
 
     # 状態, 行動のペアごとに、評価値を算出
     for i, x in enumerate(experiences):
-        s, a = x['state'], x['action']
+        s, a = x["state"], x["action"]
 
         # alphaを定義。1 /  ある状態である行動が行なわれた回数。
         sa = (s, a)
@@ -187,7 +189,7 @@ def update_Q_montecarlo(
     return Q
 
 
-def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int],Dict[str, float]]):
+def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, float]]):
     """
     モンテカルロ法で学習されたQ値の、成功/失敗を判定する関数
 
@@ -230,13 +232,13 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int],Dict[str, floa
 def main(
     env: EnvRanks,
     actions: List[str],
-    Q: Dict[Tuple[int, int],Dict[str, float]],
+    Q: Dict[Tuple[int, int], Dict[str, float]],
     N: Dict[Tuple[Tuple[int, int], str], int],
 ):
 
     policy = Policy()
 
-    for count in range(EPISODE_COUNT):
+    for count in range(MAX_EPISODE_SIZE):
 
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
@@ -249,10 +251,7 @@ def main(
 
             # ポリシー(epsilon-greedy法)に基づき行動確率を取得
             action_probs: List[float] = policy.epsilon_greedy(
-                current_state,
-                actions,
-                Q,
-                epsilon=0.5
+                current_state, actions, Q, epsilon=0.5
             )
 
             # 行動確率に基づき、行動を選択
@@ -261,19 +260,23 @@ def main(
             # 行動に基づき、次の状態を選択
             new_state: Tuple[int, int] = get_new_state(current_state, action)
 
-            # 即時報酬を獲得
+            # 1時刻後の即時報酬を獲得
             r: int = env.reward_func(new_state)
 
-            # ゴール（即時報酬が1の地点）の場合、初期化してループを抜ける
+            # ゴール（=即時報酬が10の地点）の場合、現在の状態, 行動, 報酬を保存してループを抜ける
             if r == GOAL_REWARD:
-                experiences.append({"state": current_state, "action": action, "reward": r})
+                experiences.append(
+                    {"state": current_state, "action": action, "reward": r}
+                )
                 break
             # 壁（即時報酬が-2の地点）の場合、座標は更新しない
             elif r == WALL_REWARD:
                 continue
             # ゴールでも壁でもない場合は、状態, 行動, 報酬を記録し、場所を更新
             else:
-                experiences.append({"state": current_state, "action": action, "reward": r})
+                experiences.append(
+                    {"state": current_state, "action": action, "reward": r}
+                )
                 current_state = new_state
 
         # 経験をもとに、Qテーブルを更新
@@ -287,11 +290,12 @@ def main(
         pickle.dump((Q, N), f)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    ENV = EnvRanks() # 環境を定義
-    ACTIONS: List[str] = ['up', 'down', 'left', 'right'] # 行動リストを定義
-    EPISODE_COUNT = 30 # エピソードの回数（=学習回数）を定義
+    ENV = EnvRanks()  # 環境を定義
+    ACTIONS: List[str] = ["up", "down", "left", "right"]  # 行動リストを定義
+
+    MAX_EPISODE_SIZE = 30  # エピソードの回数（=学習回数）を定義
     GOAL_REWARD = 10
     WALL_REWARD = -2
 
