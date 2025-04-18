@@ -5,14 +5,11 @@ Q-learningの実装
 import random
 import pickle
 import yaml
-import sys
-import os
+
 
 from common.env import EnvRanks
 from common.policy import Policy
 from typing import List, Tuple, Dict, TypedDict
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class ExperienceQL(TypedDict):

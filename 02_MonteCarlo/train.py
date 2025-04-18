@@ -5,14 +5,10 @@
 import random
 import pickle
 import yaml
-import sys
-import os
 
 from common.env import EnvRanks
 from common.policy import Policy
 from typing import List, Tuple, Dict, TypedDict
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class Experience(TypedDict):
@@ -207,7 +203,7 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
     """
 
     # スタート地点を定義
-    state: Tuple[int, int] = (2, 1)
+    state: Tuple[int, int] = (1, 1)
 
     # 通過した座標を記録
     path_through: List[Tuple[int, int]] = [state]
@@ -256,8 +252,8 @@ def main(
         # 辿ってきた状態, 行動, 即時報酬を格納するリスト
         experiences: List[Experience] = []
 
-        # モンテカルロ法のメインループ
-        while True:
+        # モンテカルロ法のメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
+        for _ in range(MAX_STEP):
 
             # ポリシー(epsilon-greedy法)に基づき行動確率を取得
             action_probs: List[float] = policy.epsilon_greedy(
@@ -271,21 +267,21 @@ def main(
             new_state: Tuple[int, int] = get_new_state(current_state, action)
 
             # 1時刻後の即時報酬を獲得
-            r: int = env.reward_func(new_state)
+            r_new_state: int = env.reward_func(new_state)
 
             # ゴール（=即時報酬が10の地点）の場合、現在の状態, 行動, 報酬を保存してループを抜ける
-            if r == GOAL_REWARD:
+            if r_new_state == GOAL_REWARD:
                 experiences.append(
-                    {"state": current_state, "action": action, "reward": r}
+                    {"state": current_state, "action": action, "reward": r_new_state}
                 )
                 break
             # 壁（即時報酬が-2の地点）の場合、座標は更新しない
-            elif r == WALL_REWARD:
+            elif r_new_state == WALL_REWARD:
                 continue
             # ゴールでも壁でもない場合は、状態, 行動, 報酬を記録し、場所を更新
             else:
                 experiences.append(
-                    {"state": current_state, "action": action, "reward": r}
+                    {"state": current_state, "action": action, "reward": r_new_state}
                 )
                 current_state = new_state
 
@@ -303,7 +299,7 @@ def main(
 if __name__ == "__main__":
 
     # 設定ファイルを読み込み
-    with open("02_MonteCarlo/config.yaml", "r", encoding="utf-8") as file:
+    with open("config/base.yaml", "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
 
     # 環境を定義
@@ -316,6 +312,9 @@ if __name__ == "__main__":
 
     # エピソードの回数（=学習回数）を定義
     MAX_EPISODE_SIZE: int = config["learning"]["max_episode_size"]
+
+    # 試行の打ち切り回数を定義
+    MAX_STEP: int = config["learning"]["max_step"]
 
     # Q値を初期化
     Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q()
