@@ -20,7 +20,7 @@ class EnvRanks:
         """
 
         # 設定ファイルを読み込み
-        with open("02_MonteCarlo/config.yaml", "r", encoding="utf-8") as file:
+        with open("config/base.yaml", "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
 
         WALL = config["env"]["wall_reward"]
