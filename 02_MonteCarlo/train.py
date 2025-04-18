@@ -8,6 +8,7 @@ import yaml
 
 from core.env import EnvRanks
 from core.policy import Policy
+from utils.initializer import initialize_Q, initialize_N
 from typing import List, Tuple, Dict, TypedDict
 
 
@@ -15,69 +16,6 @@ class Experience(TypedDict):
     state: Tuple[int, int]
     action: str
     reward: int
-
-
-def initialize_Q() -> Dict[Tuple[int, int], Dict[str, float]]:
-    """
-    全状態（座標）における、すべての行動確率を初期化
-
-    Args:
-        None
-
-    Returns:
-        initial_Q:
-            Qの初期値。
-            例. Q = {
-                        (1, 1): {'up': 0.0, 'down': 0.0, 'left': 0.0, 'right': 0.0},
-                        ...
-                }
-    """
-
-    # 環境の行数, 列数を取得
-    rows = len(ENV.ranks)
-    cols = len(ENV.ranks[0])
-
-    # 全状態（座標）における、すべての行動確率を0.0で初期化
-    initial_Q = {}
-    for col in range(cols):
-        for row in range(rows):
-            state: Tuple[int, int] = (row, col)
-            action_probs = {action: 0.0 for action in ACTIONS}
-            initial_Q[state] = action_probs
-
-    return initial_Q
-
-
-def initialize_N() -> Dict[Tuple[Tuple[int, int], str], int]:
-    """
-    全状態（座標）における、すべての行動回数を初期化
-
-    Args:
-        None
-
-    Returns:
-        initial_N:
-            Nの初期値。
-            例. N = {
-                        ( (1, 1), 'up'): 5,
-                        ...
-                }
-    """
-
-    # 環境の行数, 列数を取得
-    rows: int = len(ENV.ranks)
-    cols: int = len(ENV.ranks[0])
-
-    # 全状態（座標）における、すべての行動確率を0.0で初期化
-    initial_N: Dict[Tuple[Tuple[int, int], str], int] = {}
-    for col in range(cols):
-        for row in range(rows):
-            state: Tuple[int, int] = (row, col)
-            for action in ACTIONS:
-                sa = (state, action)
-                initial_N[sa] = 0
-
-    return initial_N
 
 
 def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
@@ -316,11 +254,14 @@ if __name__ == "__main__":
     # 試行の打ち切り回数を定義
     MAX_STEP: int = config["learning"]["max_step"]
 
+    # 環境の全状態(今回は座標)をリストに格納
+    states: List[Tuple[int, int]] = ENV.get_states()
+
     # Q値を初期化
-    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q()
+    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q(states, ACTIONS, 0.0)
 
     # N(ある状態・行動における行動回数を記録)を初期化
-    N: Dict[Tuple[Tuple[int, int], str], int] = initialize_N()
+    N: Dict[Tuple[Tuple[int, int], str], int] = initialize_N(states, ACTIONS)
 
     # モンテカルロ法の実施
     main(env=ENV, actions=ACTIONS, Q=Q, N=N)

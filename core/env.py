@@ -54,3 +54,21 @@ class EnvRanks:
         row = new_state[0]
         col = new_state[1]
         return self.ranks[row][col]
+
+    def get_states(self) -> List[Tuple[int, int]]:
+        """
+        行列環境のすべての状態（座標）を取得する関数。
+
+        Returns:
+            states:
+                例. [(0, 0), (0, 1), ..., (4, 5)]
+        """
+        rows = len(self.ranks)
+        cols = len(self.ranks[0])
+
+        states: List[Tuple[int, int]] = []
+        for col in range(cols):
+            for row in range(rows):
+                states.append((row, col))
+
+        return states
