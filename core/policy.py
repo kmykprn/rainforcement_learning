@@ -24,7 +24,6 @@ class Policy:
 
         return action_probs
 
-
     def get_max_value_probs(
         self,
         current_state: Tuple[int, int],
@@ -58,13 +57,12 @@ class Policy:
 
         return action_probs
 
-
     def epsilon_greedy(
         self,
         current_state: Tuple[int, int],
         actions: List[str],
         Q: Dict[Tuple[int, int], Dict[str, float]],
-        epsilon: float=0.8
+        epsilon: float = 0.8,
     ) -> List[float]:
         """
         各行動ごとに、行動確率を決定する関数

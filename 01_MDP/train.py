@@ -5,8 +5,8 @@
 import random
 import yaml
 
-from common.env import EnvRanks
-from common.transit import Transit
+from core.env import EnvRanks
+from core.transit import Transit
 
 from typing import List, Tuple
 

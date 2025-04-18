@@ -7,8 +7,8 @@ import pickle
 import yaml
 
 
-from common.env import EnvRanks
-from common.policy import Policy
+from core.env import EnvRanks
+from core.policy import Policy
 from typing import List, Tuple, Dict, TypedDict
 
 

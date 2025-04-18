@@ -1,6 +1,7 @@
 import random
 from typing import List
 
+
 class Transit:
     def __init__(self):
         pass
@@ -23,7 +24,6 @@ class Transit:
         total: float = sum(random_list)
         transit_probs: List[float] = [r / total for r in random_list]
         return transit_probs
-
 
     def transit_even(actions: List[str]) -> List[float]:
         """
