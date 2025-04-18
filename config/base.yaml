@@ -12,4 +12,4 @@ actions:
 
 learning:
   max_episode_size: 100
-  max_step: 50
+  max_step: 100
