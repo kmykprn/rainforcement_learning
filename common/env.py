@@ -1,3 +1,4 @@
+import yaml
 from typing import Tuple, List
 
 
@@ -18,15 +19,25 @@ class EnvRanks:
             None
         """
 
+        # 設定ファイルを読み込み
+        with open("02_MonteCarlo/config.yaml", "r", encoding="utf-8") as file:
+            config = yaml.safe_load(file)
+
+        WALL = config["env"]["wall_reward"]
+        GOAL = config["env"]["goal_reward"]
+        PATH = config["env"]["path_reward"]
+        TRAP = config["env"]["trap_reward"]
+
+        # 環境を定義
         if ranks:
             self.ranks = ranks
         else:
             self.ranks = [
-                [-2, -2, -2, -2, -2, -2],
-                [-2, 0, 0, 0, 0, -2],
-                [-2, 0, -2, 0, 0, -2],
-                [-2, 0, 0, -1, 10, -2],
-                [-2, -2, -2, -2, -2, -2],
+                [WALL, WALL, WALL, WALL, WALL, WALL],
+                [WALL, PATH, PATH, PATH, TRAP, WALL],
+                [WALL, PATH, WALL, PATH, PATH, WALL],
+                [WALL, PATH, PATH, TRAP, GOAL, WALL],
+                [WALL, WALL, WALL, WALL, WALL, WALL],
             ]
 
     def reward_func(self, new_state: Tuple[int, int]) -> int:
