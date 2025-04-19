@@ -10,7 +10,7 @@ pip install -e .
 ```
 
 ### コードの実施：
-各ディレクトリに train.py が格納されているため、以下のように実行する。
+各ディレクトリに train.py が格納されており、以下のように実行すると学習が始まる。
 ```
 cd reinforcement_learning
 python 03_Qlearning/train.py
