@@ -9,14 +9,14 @@ Python 3.10.0
 ### 事前作業
 ```
 cd reinforcement_learning
-pip install -e .
+poetry install
 ```
 
 ### コードの実施：
 各ディレクトリに train.py が格納されており、以下のように実行すると学習が始まる。
 ```
 cd reinforcement_learning
-python 03_Qlearning/train.py
+poetry run python 03_Qlearning/train.py
 ```
 
 ### 各ディレクトリの説明：
