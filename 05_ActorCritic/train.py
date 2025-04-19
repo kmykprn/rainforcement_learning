@@ -150,8 +150,8 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
             return
         # 壁で停止した場合
         elif r == WALL_REWARD:
-            # print(f"学習回数: {count}回, 失敗...")
-            # print(f"経路：{path_through}")
+            print(f"学習回数: {count}回, 失敗...")
+            print(f"経路：{path_through}")
             return
         # 進む
         else:

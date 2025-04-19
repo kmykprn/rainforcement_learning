@@ -235,7 +235,7 @@ if __name__ == "__main__":
     states: List[Tuple[int, int]] = ENV.get_states()
 
     # Q値を初期化
-    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q(states, ACTIONS, 0.0)
+    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q(states, ACTIONS, "zeros")
 
     # N(ある状態・行動における行動回数を記録)を初期化
     N: Dict[Tuple[Tuple[int, int], str], int] = initialize_N(states, ACTIONS)
