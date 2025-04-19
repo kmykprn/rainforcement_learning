@@ -4,7 +4,7 @@ from typing import Tuple, Dict, List
 def initialize_Q(
     states: List[Tuple],
     actions: List[str],
-    initial_value: float = 0.0,
+    init_strategy: str = "zeros",
 ) -> Dict[Tuple, Dict[str, float]]:
     """
     全状態（座標）における、すべての行動確率を初期化する。
@@ -17,8 +17,10 @@ def initialize_Q(
         actions:
             すべての行動を持つオブジェクト。
 
-        initial_value:
-            Qの初期値。
+        pattern:
+            初期化方法。
+                zeros: すべての状態を0で初期化。
+                uniform : すべての状態を等しい確率で初期化。
 
     Returns:
         initial_Q:
@@ -28,6 +30,12 @@ def initialize_Q(
                     ...
                 }
     """
+    if init_strategy == "zeros":
+        initial_value = 0.0
+    elif init_strategy == "uniform":
+        initial_value = 1 / len(actions)
+    else:
+        raise ValueError(f"Unknown pattern: {init_strategy}")
 
     initial_Q: Dict[Tuple, Dict[str, float]] = {}
     for state in states:

@@ -1,9 +1,10 @@
 import random
 from typing import List, Dict, Tuple
+from utils.math_utils import softmax
 
 
 class Policy:
-    def get_random_probs(self, actions: List[str]) -> List[float]:
+    def random_probs(self, actions: List[str]) -> List[float]:
         """
         行動ごとに、ランダムな確率（足して1になるように正規化済み）を割り当てる関数。
 
@@ -24,7 +25,7 @@ class Policy:
 
         return action_probs
 
-    def get_max_value_probs(
+    def max_value_probs(
         self,
         current_state: Tuple[int, int],
         actions: List[str],
@@ -89,12 +90,37 @@ class Policy:
         # 探索
         if random.random() <= epsilon:
             # ランダムな確率を設定
-            return self.get_random_probs(actions)
+            return self.random_probs(actions)
         # 活用
         else:
             if (current_state in Q) and sum(Q[current_state].values()) != 0:
                 # 現在の状態で、最も価値の高い行動を選択
-                return self.get_max_value_probs(current_state, actions, Q)
+                return self.max_value_probs(current_state, actions, Q)
             else:
                 # ランダムな確率を設定
-                return self.get_random_probs(actions)
+                return self.random_probs(actions)
+
+    def q_probs(
+        self,
+        current_state: Tuple[int, int],
+        Q: Dict[Tuple[int, int], Dict[str, float]],
+    ) -> List[float]:
+        """
+        Q値を行動確率に変換する関数。
+
+        Args:
+            current_state:
+                現在の状態
+
+            Q:
+                Qテーブル
+
+        Returns:
+            action_probs:
+                行動ごとの実行確率
+        """
+
+        # softmaxを使用し、価値を行動確率に変換
+        action_probs: List[float] = softmax(Q[current_state].values())
+
+        return action_probs
