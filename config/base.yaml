@@ -11,5 +11,5 @@ actions:
   - right
 
 learning:
-  max_episode_size: 10000
-  max_step: 10000
+  max_episode_size: 100
+  max_step: 100
