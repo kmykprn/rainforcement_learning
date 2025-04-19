@@ -3,15 +3,16 @@
 極力外部ライブラリは使わず実装した。
 
 ## 使い方
-事前作業
+### 事前作業
 ```
 cd reinforcement_learning
 pip install -e .
 ```
 
-## コードの実施：
-基本は、番号_手法名/train.pyを以下のように実行する。
+### コードの実施：
+各ディレクトリに train.py が格納されているため、以下のように実行する。
 ```
+cd reinforcement_learning
 python 03_Qlearning/train.py
 ```
 
