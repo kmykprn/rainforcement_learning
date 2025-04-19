@@ -1,0 +1,23 @@
+[project]
+name = "rainforcement-learning"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "kmykprn",email = "kmykprn@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml (>=6.0.2,<7.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+  { include = "core" },
+  { include = "utils" },
+  { include = "config" }
+]
