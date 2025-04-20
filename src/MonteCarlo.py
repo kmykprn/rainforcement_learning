@@ -9,6 +9,7 @@ import yaml
 from core.env import EnvRanks
 from core.policy import Policy
 from utils.initializer import initialize_Q, initialize_N
+from utils.q_utils import get_max_q_action
 from typing import List, Tuple, Dict, TypedDict
 
 
@@ -150,7 +151,7 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
     for _ in range(50):
 
         # 価値最大の行動を選択
-        action: str = max(Q[state], key=Q[state].get)
+        action: str = get_max_q_action(state, Q)
         next_state: Tuple[int, int] = get_new_state(state, action)
         r: int = env.reward_func(next_state)
 
