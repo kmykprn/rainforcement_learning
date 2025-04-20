@@ -6,41 +6,10 @@ import random
 import yaml
 
 from core.env import EnvRanks
-from core.transit import Transit
+from core.dynamics import Ranks
+from core.transition_prob import Transit
 
 from typing import List, Tuple
-
-
-def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
-    """
-    現在の状態と行動を受け取り、次の状態を返す関数
-
-    Args:
-        current_state:
-            現在の状態（座標）
-        actions:
-            行動のリスト
-
-    Returns:
-        次の状態（座標）
-    """
-
-    # 行動に基づき、次の状態を取得
-    row = current_state[0]
-    col = current_state[1]
-
-    if action == "up":
-        row -= 1
-    if action == "down":
-        row += 1
-    if action == "left":
-        col -= 1
-    if action == "right":
-        col += 1
-
-    new_state: Tuple[int, int] = (row, col)
-
-    return new_state
 
 
 def main(env: EnvRanks, actions: List[str]):
@@ -54,6 +23,9 @@ def main(env: EnvRanks, actions: List[str]):
     # 遷移確率を算出するオブジェクトを定義
     transit = Transit()
 
+    # 現在の状態と行動をもとに、次の状態を計算するオブジェクトを呼び出し
+    rank_dynamics = Ranks()
+
     # マルコフ決定過程のメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
     for _ in range(MAX_STEP):
 
@@ -64,7 +36,7 @@ def main(env: EnvRanks, actions: List[str]):
         action: str = random.choices(actions, k=1, weights=transit_probs)[0]
 
         # 遷移関数に基づき、次の状態を取得
-        new_state: Tuple[int, int] = get_new_state(
+        new_state: Tuple[int, int] = rank_dynamics.get_new_state(
             current_state=current_state, action=action
         )
 

@@ -9,8 +9,9 @@ import yaml
 
 from core.env import EnvRanks
 from core.policy import Policy
+from core.dynamics import Ranks
+from utils.evaluate import evaluate_Q
 from utils.initializer import initialize_Q, initialize_N
-from utils.q_utils import get_max_q_action
 from typing import List, Tuple, Dict, TypedDict
 
 
@@ -23,38 +24,6 @@ class ExperienceQL(TypedDict):
     new_state: Tuple[int, int]
     action: str
     reward: int
-
-
-def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
-    """
-    現在の状態と行動を受け取り、次の状態を返す関数
-
-    Args:
-        current_state:
-            現在の状態（座標）
-        actions:
-            行動のリスト
-
-    Returns:
-        次の状態（座標）
-    """
-
-    # 行動に基づき、次の状態を取得
-    row = current_state[0]
-    col = current_state[1]
-
-    if action == "up":
-        row -= 1
-    if action == "down":
-        row += 1
-    if action == "left":
-        col -= 1
-    if action == "right":
-        col += 1
-
-    new_state: Tuple[int, int] = (row, col)
-
-    return new_state
 
 
 def update_Q_Qlearning(
@@ -107,52 +76,6 @@ def update_Q_Qlearning(
     return Q
 
 
-def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, float]]):
-    """
-    学習済みQテーブルで、成功/失敗を判定する関数
-
-    Args:
-        count:
-            Q値の学習回数
-        env:
-            環境
-        Q:
-            Qテーブル
-    """
-
-    # スタート地点を定義
-    state: Tuple[int, int] = (1, 1)
-
-    # 通過した座標を記録
-    path_through: List[Tuple[int, int]] = [state]
-
-    # 価値最大の行動を行なっても、ゴールに到達しない場合があるので、50試行で打ち止め
-    for _ in range(50):
-
-        # 価値最大の行動を選択
-        action: str = get_max_q_action(state, Q)
-        next_state: Tuple[int, int] = get_new_state(state, action)
-        r: int = env.reward_func(next_state)
-
-        # ゴールに到達した場合
-        if r == GOAL_REWARD:
-            path_through.append(next_state)
-            print(f"学習回数: {count}回, 成功!")
-            print(f"経路：{path_through}")
-            return
-        # 壁で停止した場合
-        elif r == WALL_REWARD:
-            print(f"学習回数: {count}回, 失敗...")
-            return
-        # 進む
-        else:
-            path_through.append(next_state)
-            state = next_state
-
-    # 上記のいずれでも終了しなかった場合（未到達）
-    print(f"学習回数: {count}回, 未到達（50ステップ経過）")
-
-
 def main(
     env: EnvRanks,
     actions: List[str],
@@ -167,6 +90,9 @@ def main(
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
 
+        # 現在の状態と行動をもとに、次の状態を計算するオブジェクトを呼び出し
+        rank_dynamics = Ranks()
+
         # Q-learningのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
@@ -179,7 +105,9 @@ def main(
             action = random.choices(actions, k=1, weights=action_probs)[0]
 
             # 行動に基づき、次の状態を選択
-            new_state: Tuple[int, int] = get_new_state(current_state, action)
+            new_state: Tuple[int, int] = rank_dynamics.get_new_state(
+                current_state, action
+            )
 
             # 1時刻後の即時報酬を獲得
             r_new_state: int = env.reward_func(new_state)
@@ -205,7 +133,7 @@ def main(
                 current_state = new_state
 
         # 評価
-        evaluate_Q(count, env, Q)
+        evaluate_Q(count, env, Q, GOAL_REWARD, WALL_REWARD)
 
     # QとNを保存
     with open("weights/Qlearning.pkl", "wb") as f:
