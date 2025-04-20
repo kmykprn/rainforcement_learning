@@ -25,7 +25,7 @@ class Transit:
         transit_probs: List[float] = [r / total for r in random_list]
         return transit_probs
 
-    def transit_even(actions: List[str]) -> List[float]:
+    def transit_even(self, actions: List[str]) -> List[float]:
         """
         次の状態に等確率で遷移する遷移確率リストを生成する関数
 

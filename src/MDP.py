@@ -51,11 +51,14 @@ def main(env: EnvRanks, actions: List[str]):
     # ゴールまでに通過したパスを保存するリスト
     path_through: List[Tuple[int, int]] = [current_state]
 
+    # 遷移確率を算出するオブジェクトを定義
+    transit = Transit()
+
     # マルコフ決定過程のメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
     for _ in range(MAX_STEP):
 
         # 遷移確率を取得
-        transit_probs: List[float] = Transit.transit_even(actions)
+        transit_probs: List[float] = transit.transit_even(actions)
 
         # 遷移確率に基づき、行動を選択
         action: str = random.choices(actions, k=1, weights=transit_probs)[0]
