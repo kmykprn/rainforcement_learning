@@ -13,15 +13,16 @@ from utils.initializer import initialize_Q, initialize_N
 from typing import List, Tuple, Dict, TypedDict
 
 
-class ExperienceAC(TypedDict):
+class ExperienceSARSA(TypedDict):
     """
-    ActorCritic用の静的タイプ
+    SARSA用の静的タイプ
     """
 
     state: Tuple[int, int]
     action: str
     reward: int
     new_state: Tuple[int, int]
+    new_action: str
 
 
 def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
@@ -56,19 +57,18 @@ def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int
     return new_state
 
 
-def update_Q_ActorCritic(
-    experience: ExperienceAC,
+def update_Q_SARSA(
+    experience: ExperienceSARSA,
     Q: Dict[Tuple[int, int], Dict[str, float]],
     N: Dict[Tuple[Tuple[int, int], str], int],
-    critic: Dict[Tuple[int, int], float],
     gamma: float = 0.9,
-) -> None:
+) -> Dict[Tuple[int, int], Dict[str, float]]:
     """
     「ある状態（座標）である行動（移動）をした」ときの、評価値を推定
 
     Args:
         experience:
-            現在の状態（座標）, 行動, 次の状態, 報酬が格納された辞書
+            現在の状態（座標）, 行動, 次の状態, 次の行動, 報酬が格納された辞書
 
         Q:
             Qテーブル。
@@ -76,7 +76,6 @@ def update_Q_ActorCritic(
                         (1, 1): {'up': 0.0, 'down': 0.0, 'left': 0.0, 'right': 0.0},
                         ...
                 }
-
         N:
             ある状態で, ある行動が行なわれた回数。
             例. N = {
@@ -84,19 +83,17 @@ def update_Q_ActorCritic(
                         ...
                 }
 
-        critic:
-            価値を評価するオブジェクト
-
     Returns:
         Q:
             行動確率が更新されたQテーブル
     """
 
-    s, a, r, s_new = (
+    s, a, r, s_new, a_new = (
         experience["state"],
         experience["action"],
         experience["reward"],
         experience["new_state"],
+        experience["new_action"],
     )
 
     # alphaを定義。1 /  状態sで行動aを取った回数。
@@ -105,14 +102,10 @@ def update_Q_ActorCritic(
     N[sa] += 1
     alpha = 1 / N[sa]
 
-    # td誤差を計算
-    td = r + gamma * critic[s_new] - critic[s]
-
     # Qテーブルを更新
-    Q[s][a] = Q[s][a] + alpha * td
+    Q[s][a] = Q[s][a] + alpha * (r + gamma * Q[s_new][a_new] - Q[s][a])
 
-    # Criticを更新
-    critic[s] = critic[s] + alpha * td
+    return Q
 
 
 def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, float]]):
@@ -167,75 +160,77 @@ def main(
     actions: List[str],
     Q: Dict[Tuple[int, int], Dict[str, float]],
     N: Dict[Tuple[Tuple[int, int], str], int],
-    critic: Dict[Tuple, float],
 ):
-    """
-    ActorCriticのメイン関数
-
-    Args:
-        env:
-            環境
-
-        actions:
-            行動のリスト
-
-        Q:
-            Qテーブル
-
-        N:
-            ある状態における行動の回数を記録するオブジェクト
-
-        critic:
-            価値評価用オブジェクト
-    """
 
     policy = Policy()
 
     for count in range(MAX_EPISODE_SIZE):
 
+        """
+        初期化
+        """
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
 
-        # ActorCriticのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
+        # ポリシー(epsilon-greedy法)に基づき行動確率を取得
+        action_probs: List[float] = policy.epsilon_greedy(
+            current_state, actions, Q, epsilon=0.5
+        )
+
+        # 行動確率に基づき、行動を選択
+        action = random.choices(actions, k=1, weights=action_probs)[0]
+
+        # SARSAのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
-            # ポリシー(Q値を行動確率に変換)に基づき行動確率を取得
-            action_probs: List[float] = policy.q_probs(current_state, Q)
-
-            # 行動確率に基づき、行動を選択
-            action = random.choices(actions, k=1, weights=action_probs)[0]
-
+            """
+            次の状態における価値（実測値）を計算
+            """
             # 行動に基づき、次の状態を選択
             new_state: Tuple[int, int] = get_new_state(current_state, action)
 
             # 1時刻後の即時報酬を獲得
             r_new_state: int = env.reward_func(new_state)
 
+            # ポリシーに基づき、次の状態における行動確率を取得
+            new_action_probs: List[float] = policy.epsilon_greedy(
+                new_state, actions, Q, epsilon=0.5
+            )
+
+            # 行動確率に基づき、行動を選択
+            new_action = random.choices(actions, k=1, weights=new_action_probs)[0]
+
             # 現在の状態, 行動, 次の状態, 即時報酬を格納
-            experience: ExperienceAC = {
+            experience: ExperienceSARSA = {
                 "state": current_state,
                 "action": action,
                 "reward": r_new_state,
                 "new_state": new_state,
+                "new_action": new_action,
             }
 
             # ゴールの場合、Qテーブルを更新してループを抜ける
             if r_new_state == GOAL_REWARD:
-                update_Q_ActorCritic(experience, Q, N, critic)
+                update_Q_SARSA(experience, Q, N)
                 break
-            # 壁（即時報酬が-2の地点）の場合、行動を取り直す
+            # 壁（即時報酬が-2の地点）の場合、行動のみ取り直し、状態は更新しない
             elif r_new_state == WALL_REWARD:
+                action_probs: List[float] = policy.epsilon_greedy(
+                    current_state, actions, Q, epsilon=0.5
+                )
+                action = random.choices(actions, k=1, weights=action_probs)[0]
                 continue
             # 現在の状態とQテーブルを更新
             else:
-                update_Q_ActorCritic(experience, Q, N, critic)
+                update_Q_SARSA(experience, Q, N)
                 current_state = new_state
+                action = new_action
 
         # 評価
         evaluate_Q(count, env, Q)
 
     # QとNを保存
-    with open("05_ActorCritic/q_and_n.pkl", "wb") as f:
+    with open("weights/SARSA.pkl", "wb") as f:
         pickle.dump((Q, N), f)
 
 
@@ -262,17 +257,11 @@ if __name__ == "__main__":
     # 環境の全状態(今回は座標)をリストに格納
     states: List[Tuple[int, int]] = ENV.get_states()
 
-    # 価値評価オブジェクトを初期化
-    # 例. critic = {(0, 0): 0.0, (0, 1): 0.0, ..., (4, 5): 0.0}
-    critic: Dict[Tuple, float] = {state: 0.0 for state in states}
-
     # Q値を初期化
-    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q(
-        states, ACTIONS, "uniform"
-    )
+    Q: Dict[Tuple[int, int], Dict[str, float]] = initialize_Q(states, ACTIONS, "zeros")
 
     # N(ある状態・行動における行動回数を記録)を初期化
     N: Dict[Tuple[Tuple[int, int], str], int] = initialize_N(states, ACTIONS)
 
-    # ActorCriticの実施
-    main(env=ENV, actions=ACTIONS, Q=Q, N=N, critic=critic)
+    # Qlearningの実施
+    main(env=ENV, actions=ACTIONS, Q=Q, N=N)

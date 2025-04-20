@@ -1,5 +1,5 @@
 """
-SARSAの実装
+Q-learningの実装
 """
 
 import random
@@ -13,16 +13,15 @@ from utils.initializer import initialize_Q, initialize_N
 from typing import List, Tuple, Dict, TypedDict
 
 
-class ExperienceSARSA(TypedDict):
+class ExperienceQL(TypedDict):
     """
-    SARSA用の静的タイプ
+    Qlearning用の静的タイプ
     """
 
     state: Tuple[int, int]
+    new_state: Tuple[int, int]
     action: str
     reward: int
-    new_state: Tuple[int, int]
-    new_action: str
 
 
 def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int]:
@@ -57,8 +56,8 @@ def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int
     return new_state
 
 
-def update_Q_SARSA(
-    experience: ExperienceSARSA,
+def update_Q_Qlearning(
+    experience: ExperienceQL,
     Q: Dict[Tuple[int, int], Dict[str, float]],
     N: Dict[Tuple[Tuple[int, int], str], int],
     gamma: float = 0.9,
@@ -68,7 +67,7 @@ def update_Q_SARSA(
 
     Args:
         experience:
-            現在の状態（座標）, 行動, 次の状態, 次の行動, 報酬が格納された辞書
+            現在の状態（座標）, 行動, 次の状態, 報酬が格納された辞書
 
         Q:
             Qテーブル。
@@ -88,12 +87,11 @@ def update_Q_SARSA(
             行動確率が更新されたQテーブル
     """
 
-    s, a, r, s_new, a_new = (
+    s, a, s_new, r = (
         experience["state"],
         experience["action"],
-        experience["reward"],
         experience["new_state"],
-        experience["new_action"],
+        experience["reward"],
     )
 
     # alphaを定義。1 /  状態sで行動aを取った回数。
@@ -103,7 +101,7 @@ def update_Q_SARSA(
     alpha = 1 / N[sa]
 
     # Qテーブルを更新
-    Q[s][a] = Q[s][a] + alpha * (r + gamma * Q[s_new][a_new] - Q[s][a])
+    Q[s][a] = Q[s][a] + alpha * ((r + gamma * max(Q[s_new].values())) - Q[s][a])
 
     return Q
 
@@ -144,7 +142,6 @@ def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, flo
         # 壁で停止した場合
         elif r == WALL_REWARD:
             print(f"学習回数: {count}回, 失敗...")
-            print(f"経路：{path_through}")
             return
         # 進む
         else:
@@ -166,71 +163,51 @@ def main(
 
     for count in range(MAX_EPISODE_SIZE):
 
-        """
-        初期化
-        """
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
 
-        # ポリシー(epsilon-greedy法)に基づき行動確率を取得
-        action_probs: List[float] = policy.epsilon_greedy(
-            current_state, actions, Q, epsilon=0.5
-        )
-
-        # 行動確率に基づき、行動を選択
-        action = random.choices(actions, k=1, weights=action_probs)[0]
-
-        # SARSAのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
+        # Q-learningのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
-            """
-            次の状態における価値（実測値）を計算
-            """
+            # ポリシー(epsilon-greedy法)に基づき行動確率を取得
+            action_probs: List[float] = policy.epsilon_greedy(
+                current_state, actions, Q, epsilon=0.5
+            )
+
+            # 行動確率に基づき、行動を選択
+            action = random.choices(actions, k=1, weights=action_probs)[0]
+
             # 行動に基づき、次の状態を選択
             new_state: Tuple[int, int] = get_new_state(current_state, action)
 
             # 1時刻後の即時報酬を獲得
             r_new_state: int = env.reward_func(new_state)
 
-            # ポリシーに基づき、次の状態における行動確率を取得
-            new_action_probs: List[float] = policy.epsilon_greedy(
-                new_state, actions, Q, epsilon=0.5
-            )
-
-            # 行動確率に基づき、行動を選択
-            new_action = random.choices(actions, k=1, weights=new_action_probs)[0]
-
             # 現在の状態, 行動, 次の状態, 即時報酬を格納
-            experience: ExperienceSARSA = {
+            experience: ExperienceQL = {
                 "state": current_state,
                 "action": action,
-                "reward": r_new_state,
                 "new_state": new_state,
-                "new_action": new_action,
+                "reward": r_new_state,
             }
 
             # ゴールの場合、Qテーブルを更新してループを抜ける
             if r_new_state == GOAL_REWARD:
-                update_Q_SARSA(experience, Q, N)
+                update_Q_Qlearning(experience, Q, N)
                 break
-            # 壁（即時報酬が-2の地点）の場合、行動のみ取り直し、状態は更新しない
+            # 壁（即時報酬が-2の地点）の場合、座標は更新しない
             elif r_new_state == WALL_REWARD:
-                action_probs: List[float] = policy.epsilon_greedy(
-                    current_state, actions, Q, epsilon=0.5
-                )
-                action = random.choices(actions, k=1, weights=action_probs)[0]
                 continue
-            # 現在の状態とQテーブルを更新
+            # 場所とQテーブルを更新
             else:
-                update_Q_SARSA(experience, Q, N)
+                update_Q_Qlearning(experience, Q, N)
                 current_state = new_state
-                action = new_action
 
         # 評価
         evaluate_Q(count, env, Q)
 
     # QとNを保存
-    with open("04_SARSA/q_and_n.pkl", "wb") as f:
+    with open("weights/Qlearning.pkl", "wb") as f:
         pickle.dump((Q, N), f)
 
 

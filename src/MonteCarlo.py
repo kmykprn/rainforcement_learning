@@ -1,11 +1,10 @@
 """
-Q-learningの実装
+モンテカルロ法の実装
 """
 
 import random
 import pickle
 import yaml
-
 
 from core.env import EnvRanks
 from core.policy import Policy
@@ -13,13 +12,8 @@ from utils.initializer import initialize_Q, initialize_N
 from typing import List, Tuple, Dict, TypedDict
 
 
-class ExperienceQL(TypedDict):
-    """
-    Qlearning用の静的タイプ
-    """
-
+class Experience(TypedDict):
     state: Tuple[int, int]
-    new_state: Tuple[int, int]
     action: str
     reward: int
 
@@ -56,18 +50,42 @@ def get_new_state(current_state: Tuple[int, int], action: str) -> Tuple[int, int
     return new_state
 
 
-def update_Q_Qlearning(
-    experience: ExperienceQL,
+def calculate_G(rewards: List[int], gamma: float = 0.99) -> List[float]:
+    """
+    即時報酬の総和を求める関数
+
+    Args:
+        rewards:
+            エピソード終了までの即時報酬のリスト。
+            例えばrewards[t]には、s(t)ではなくs(t+1)の即時報酬が格納されている。
+
+    Returns:
+        G:
+            即時報酬の総和
+    """
+
+    # T: エピソードの長さ（数式中の T に対応）
+    T: int = len(rewards)
+    G: List[float] = [0.0] * T
+    for t in range(T):
+        g = 0.0
+        for k in range(T - t):  # ← k = 0 〜 T - t - 1
+            g += pow(gamma, k) * rewards[t + k]
+        G[t] = g
+    return G
+
+
+def update_Q_montecarlo(
+    experiences: List[Experience],
     Q: Dict[Tuple[int, int], Dict[str, float]],
     N: Dict[Tuple[Tuple[int, int], str], int],
-    gamma: float = 0.9,
 ) -> Dict[Tuple[int, int], Dict[str, float]]:
     """
     「ある状態（座標）である行動（移動）をした」ときの、評価値を推定
 
     Args:
-        experience:
-            現在の状態（座標）, 行動, 次の状態, 報酬が格納された辞書
+        experiences:
+            エピソード終了までの状態, 行動, 報酬を格納したリスト。
 
         Q:
             Qテーブル。
@@ -87,28 +105,31 @@ def update_Q_Qlearning(
             行動確率が更新されたQテーブル
     """
 
-    s, a, s_new, r = (
-        experience["state"],
-        experience["action"],
-        experience["new_state"],
-        experience["reward"],
-    )
+    # 各状態における, 1時刻後の即時報酬のリストを取得
+    rewards = [e["reward"] for e in experiences]
 
-    # alphaを定義。1 /  状態sで行動aを取った回数。
-    # 報酬の期待値（平均値）を求めるために使用。逐次平均を取る。
-    sa = (s, a)
-    N[sa] += 1
-    alpha = 1 / N[sa]
+    # 報酬の総和を計算
+    G = calculate_G(rewards)
 
-    # Qテーブルを更新
-    Q[s][a] = Q[s][a] + alpha * ((r + gamma * max(Q[s_new].values())) - Q[s][a])
+    # 状態, 行動のペアごとに、評価値を算出
+    for i, x in enumerate(experiences):
+        s, a = x["state"], x["action"]
+
+        # alphaを定義。1 /  状態sで行動aを取った回数。
+        # 報酬の期待値（平均値）を求めるために使用。逐次平均を取る。
+        sa = (s, a)
+        N[sa] += 1
+        alpha = 1 / N[sa]
+
+        # 評価値を算出
+        Q[s][a] = Q[s][a] + alpha * (G[i] - Q[s][a])
 
     return Q
 
 
 def evaluate_Q(count: int, env: EnvRanks, Q: Dict[Tuple[int, int], Dict[str, float]]):
     """
-    学習済みQテーブルで、成功/失敗を判定する関数
+    モンテカルロ法で学習されたQ値の、成功/失敗を判定する関数
 
     Args:
         count:
@@ -166,7 +187,10 @@ def main(
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
 
-        # Q-learningのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
+        # 辿ってきた状態, 行動, 即時報酬を格納するリスト
+        experiences: List[Experience] = []
+
+        # モンテカルロ法のメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
             # ポリシー(epsilon-greedy法)に基づき行動確率を取得
@@ -183,31 +207,30 @@ def main(
             # 1時刻後の即時報酬を獲得
             r_new_state: int = env.reward_func(new_state)
 
-            # 現在の状態, 行動, 次の状態, 即時報酬を格納
-            experience: ExperienceQL = {
-                "state": current_state,
-                "action": action,
-                "new_state": new_state,
-                "reward": r_new_state,
-            }
-
-            # ゴールの場合、Qテーブルを更新してループを抜ける
+            # ゴール（=即時報酬が10の地点）の場合、現在の状態, 行動, 報酬を保存してループを抜ける
             if r_new_state == GOAL_REWARD:
-                update_Q_Qlearning(experience, Q, N)
+                experiences.append(
+                    {"state": current_state, "action": action, "reward": r_new_state}
+                )
                 break
             # 壁（即時報酬が-2の地点）の場合、座標は更新しない
             elif r_new_state == WALL_REWARD:
                 continue
-            # 場所とQテーブルを更新
+            # ゴールでも壁でもない場合は、状態, 行動, 報酬を記録し、場所を更新
             else:
-                update_Q_Qlearning(experience, Q, N)
+                experiences.append(
+                    {"state": current_state, "action": action, "reward": r_new_state}
+                )
                 current_state = new_state
+
+        # 経験をもとに、Qテーブルを更新
+        Q = update_Q_montecarlo(experiences, Q, N)
 
         # 評価
         evaluate_Q(count, env, Q)
 
     # QとNを保存
-    with open("03_Qlearning/q_and_n.pkl", "wb") as f:
+    with open("weights/MonteCarlo.pkl", "wb") as f:
         pickle.dump((Q, N), f)
 
 
@@ -240,5 +263,5 @@ if __name__ == "__main__":
     # N(ある状態・行動における行動回数を記録)を初期化
     N: Dict[Tuple[Tuple[int, int], str], int] = initialize_N(states, ACTIONS)
 
-    # Qlearningの実施
+    # モンテカルロ法の実施
     main(env=ENV, actions=ACTIONS, Q=Q, N=N)
