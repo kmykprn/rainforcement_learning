@@ -1,6 +1,6 @@
 import random
 from typing import List, Dict, Tuple
-from utils.math_utils import softmax
+from rl.utils.math_utils import softmax
 
 
 class Policy:

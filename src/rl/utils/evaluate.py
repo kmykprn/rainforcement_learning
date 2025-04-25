@@ -1,5 +1,5 @@
-from core.env import EnvRanks
-from core.dynamics import Ranks
+from rl.core.env import EnvRanks
+from rl.core.dynamics import Ranks
 
 from typing import Dict, List, Tuple
 

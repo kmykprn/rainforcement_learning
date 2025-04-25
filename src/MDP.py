@@ -5,9 +5,9 @@
 import random
 import yaml
 
-from core.env import EnvRanks
-from core.dynamics import Ranks
-from core.transition_prob import Transit
+from rl.core.env import EnvRanks
+from rl.core.dynamics import Ranks
+from rl.core.transition_prob import Transit
 
 from typing import List, Tuple
 

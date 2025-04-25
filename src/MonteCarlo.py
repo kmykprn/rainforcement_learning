@@ -6,11 +6,11 @@ import random
 import pickle
 import yaml
 
-from core.env import EnvRanks
-from core.policy import Policy
-from core.dynamics import Ranks
-from utils.evaluate import evaluate_Q
-from utils.initializer import initialize_Q, initialize_N
+from rl.core.env import EnvRanks
+from rl.core.policy import Policy
+from rl.core.dynamics import Ranks
+from rl.utils.evaluate import evaluate_Q
+from rl.utils.initializer import initialize_Q, initialize_N
 from typing import List, Tuple, Dict, TypedDict
 
 
