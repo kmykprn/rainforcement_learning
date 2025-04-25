@@ -1,5 +1,5 @@
 import yaml
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 
 class EnvRanks:
@@ -7,7 +7,7 @@ class EnvRanks:
     行列形式の環境と、環境に基づく報酬関数を定義
     """
 
-    def __init__(self, ranks: List[List[int]] = None):
+    def __init__(self, ranks: Optional[List[List[int]]] = None):
         """
         環境の行列を定義
 

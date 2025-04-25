@@ -47,9 +47,17 @@ class Policy:
                 行動ごとの実行確率
         """
 
-        # 現在の状態で、最も価値の高い行動を選択
+        # 行動と行動確率を取り出し
         q_current_state: Dict[str, float] = Q[current_state]
-        max_q_action: str = max(q_current_state, key=q_current_state.get)
+        action_list: List[str] = list(q_current_state.keys())
+        action_probs_list: List[float] = list(q_current_state.values())
+
+        # 行動確率の中から、最も行動確率が高い要素のインデックスを取得
+        max_q_action_probs: float = max(action_probs_list)
+        max_index: int = action_probs_list.index(max_q_action_probs)
+
+        # 対応する行動（キー）を取得
+        max_q_action: str = action_list[max_index]
 
         # 行動価値が高いインデックスを1.0に、それ以外を0.0にしたリストを生成
         action_probs = [0.0] * len(actions)
@@ -121,6 +129,6 @@ class Policy:
         """
 
         # softmaxを使用し、価値を行動確率に変換
-        action_probs: List[float] = softmax(Q[current_state].values())
+        action_probs: List[float] = softmax(list(Q[current_state].values()))
 
         return action_probs
