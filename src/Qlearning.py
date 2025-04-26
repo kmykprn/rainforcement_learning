@@ -96,9 +96,12 @@ def main(
         # Q-learningのメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
-            # ポリシー(epsilon-greedy法)に基づき行動確率を取得
-            action_probs: List[float] = policy.epsilon_greedy(
-                current_state, actions, Q, epsilon=0.5
+            # 現在の状態における行動確率（行動ごとのQ値）を取り出し
+            action_probs: List[float] = list(Q[current_state].values())
+
+            # ポリシー(epsilon-greedy法)に基づき行動確率を調整
+            action_probs: List[float] = policy.epsilon_greedy_nn(
+                action_probs, epsilon=0.2
             )
 
             # 行動確率に基づき、行動を選択
