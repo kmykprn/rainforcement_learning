@@ -120,13 +120,11 @@ def main(
         # モンテカルロ法のメインループ(MAX_STEPまでにゴールに到達しなければ打ち切り)
         for _ in range(MAX_STEP):
 
-            # 現在の状態における行動確率（行動ごとのQ値）を取り出し
-            action_probs: List[float] = list(Q[current_state].values())
+            # 現在の状態における, 行動ごとのQ値を取り出し
+            q_values: List[float] = list(Q[current_state].values())
 
-            # ポリシー(epsilon-greedy法)に基づき行動確率を調整
-            action_probs: List[float] = policy.epsilon_greedy_nn(
-                action_probs, epsilon=0.2
-            )
+            # ポリシー(epsilon-greedy法)に基づきQ値を行動確率に変換
+            action_probs: List[float] = policy.epsilon_greedy(q_values)
 
             # 行動確率に基づき、行動を選択
             action = random.choices(actions, k=1, weights=action_probs)[0]

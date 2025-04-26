@@ -95,11 +95,11 @@ def main(
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
 
-        # 現在の状態における行動確率（行動ごとのQ値）を取り出し
-        action_probs: List[float] = list(Q[current_state].values())
+        # 現在の状態における, 行動ごとのQ値を取り出し
+        q_values: List[float] = list(Q[current_state].values())
 
-        # ポリシー(epsilon-greedy法)に基づき行動確率を調整
-        action_probs: List[float] = policy.epsilon_greedy_nn(action_probs, epsilon=0.2)
+        # ポリシー(epsilon-greedy法)に基づきQ値を行動確率に変換
+        action_probs: List[float] = policy.epsilon_greedy(q_values)
 
         # 行動確率に基づき、行動を選択
         action = random.choices(actions, k=1, weights=action_probs)[0]
@@ -121,13 +121,11 @@ def main(
             # 1時刻後の即時報酬を獲得
             r_new_state: int = env.reward_func(new_state)
 
-            # 現在の状態における行動確率（行動ごとのQ値）を取り出し
-            new_action_probs: List[float] = list(Q[new_state].values())
+            # 次の状態における, 行動ごとのQ値を取り出し
+            new_q_values: List[float] = list(Q[new_state].values())
 
-            # ポリシー(epsilon-greedy法)に基づき行動確率を調整
-            new_action_probs: List[float] = policy.epsilon_greedy_nn(
-                new_action_probs, epsilon=0.2
-            )
+            # ポリシー(epsilon-greedy法)に基づきQ値を行動確率に変換
+            new_action_probs: List[float] = policy.epsilon_greedy(new_q_values)
 
             # 行動確率に基づき、行動を選択
             new_action = random.choices(actions, k=1, weights=new_action_probs)[0]
@@ -147,13 +145,13 @@ def main(
                 break
             # 壁（即時報酬が-2の地点）の場合、行動のみ取り直し、状態は更新しない
             elif r_new_state == WALL_REWARD:
-                # 現在の状態における行動確率（行動ごとのQ値）を取り出し
-                action_probs: List[float] = list(Q[current_state].values())
+                # 現在の状態における, 行動ごとのQ値を取り出し
+                q_values: List[float] = list(Q[current_state].values())
 
-                # ポリシー(epsilon-greedy法)に基づき行動確率を調整
-                action_probs: List[float] = policy.epsilon_greedy_nn(
-                    action_probs, epsilon=0.2
-                )
+                # ポリシー(epsilon-greedy法)に基づきQ値を行動確率に変換
+                action_probs: List[float] = policy.epsilon_greedy(q_values)
+
+                # 行動確率に基づき、行動を選択
                 action = random.choices(actions, k=1, weights=action_probs)[0]
                 continue
             # 現在の状態とQテーブルを更新
