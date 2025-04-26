@@ -25,6 +25,19 @@ class Policy:
 
         return action_probs
 
+    def to_onehot(self, probs: List[float]) -> List[float]:
+        """
+        最も行動価値が高い要素のベクトルを1に, それ以外を0に変換するベクトル
+
+        Args:
+            probs: 行動価値のリスト
+        Returns:
+            probs_onehot: 最も行動価値が高い要素を1.0に、それ以外を0.0に変換したベクトル
+        """
+        max_prob = max(probs)
+        probs_onehot = [1.0 if p == max_prob else 0.0 for p in probs]
+        return probs_onehot
+
     def max_value_probs(
         self,
         current_state: Tuple[int, int],
@@ -107,6 +120,58 @@ class Policy:
             else:
                 # ランダムな確率を設定
                 return self.random_probs(actions)
+
+    def random_probs_nn(self, num_actions: int) -> List[float]:
+        """
+        行動ごとに、ランダムな確率（足して1になるように正規化済み）を割り当てる関数。
+
+        Args:
+            num_actions: 取りうる行動の個数
+
+        Returns:
+            action_probs: 行動ごとの均等な実行確率
+        """
+        # 行動ごとに、ランダムな確率を設定
+        random_list: List[float] = [random.random() for _ in range(num_actions)]
+
+        # 足して1になるように正規化
+        total: float = sum(random_list)
+        action_probs: List[float] = [r / total for r in random_list]
+
+        return action_probs
+
+    def epsilon_greedy_nn(
+        self,
+        action_probs: List[float],
+        epsilon: float = 0.8,
+    ) -> List[float]:
+        """
+        e-greedy法を実行する関数。
+        epsilonの割合でランダムな行動を取り、1-epsilonの行動で最もQ値の高い行動を取る。
+
+        Args:
+            action_probs:
+                行動ごとの価値（行動確率）
+            epsilon:
+                探索, 活用の割合
+
+        Returns:
+            action_probs:
+                行動ごとの実行確率
+        """
+        num_actions: int = len(action_probs)
+        # 探索
+        if random.random() <= epsilon:
+            # ランダムな確率を設定
+            return self.random_probs_nn(num_actions)
+        # 活用
+        else:
+            # 現在の状態で、最も価値の高い行動を選択
+            if action_probs and sum(action_probs) != 0:
+                return self.to_onehot(action_probs)
+            # ランダムな確率を設定
+            else:
+                return self.random_probs_nn(num_actions)
 
     def q_probs(
         self,
