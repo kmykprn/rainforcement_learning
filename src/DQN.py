@@ -16,6 +16,7 @@ from dqn.utils.evaluate import evaluate_model
 from dqn.core.replaybuffer import ReplayBuffer
 from dqn.models.simpleDQN import SimpleDQN
 from typing import List, Tuple
+from torch.utils.tensorboard.writer import SummaryWriter
 
 
 def estimate_q_all_actions(
@@ -70,15 +71,22 @@ def main(
 
     # ターゲットネットワークの重みを初期化 (学習開始時)
     target_model.load_state_dict(model.state_dict())
-    target_model.eval()  # ターゲットはずっと評価モード
 
-    # 全体のステップ数をカウント (ターゲットネットワーク更新などに使う)
+    # TensorBoardのログを保存するディレクトリを指定
+    writer = SummaryWriter("logs/loss")
+
+    # 全体のステップ数をカウント (ターゲットネットワーク更新, 評価などに使う)
     global_step_count = 0
 
-    # 学習回数をカウント(評価に使用する)
-    count = 0
+    # 学習回数を記録
+    num_learning = 0
+
+    # epsilon-greedy法のepsilon値を徐々に減衰させる(初期値は1.0)
+    epsilon = 0.8
 
     for _ in range(MAX_EPISODE_SIZE):
+
+        print(f"epsilon: {epsilon}")
 
         # 初期位置を定義(要素が0から始めると、envの範囲外を指定する場合があるので変更しない)
         current_state: Tuple[int, int] = (1, 1)
@@ -92,7 +100,7 @@ def main(
             q_values: List[float] = estimate_q_all_actions(current_state, model, device)
 
             # ポリシー(epsilon-greedy法)に基づきQ値を行動確率に変換
-            action_probs: List[float] = policy.epsilon_greedy(q_values)
+            action_probs: List[float] = policy.epsilon_greedy(q_values, epsilon)
 
             # 行動確率に基づき、行動を選択
             action = random.choices(ACTIONS, k=1, weights=action_probs)[0]
@@ -117,6 +125,37 @@ def main(
             # バッファに保存
             replay_buffer.add(experience)
 
+            # モデルを学習
+            if len(replay_buffer) >= BATCH_SIZE:
+                num_learning += 1
+                train_rl(
+                    device=device,
+                    model=model,
+                    target_model=target_model,
+                    optimizer=optimizer,
+                    replay_buffer=replay_buffer,
+                    actions_list=ACTIONS,
+                    batch_size=BATCH_SIZE,
+                    writer=writer,
+                    gamma=0.99,
+                    global_step=global_step_count,
+                )
+
+            # ターゲットネットワーク更新 (一定ステップごと)
+            if global_step_count % TARGET_UPDATE_FREQ == 0:
+                target_model.load_state_dict(model.state_dict())
+
+                # 評価
+                evaluate_model(
+                    count=num_learning,
+                    env=ENV,
+                    actions_list=ACTIONS,
+                    model=model,
+                    device=device,
+                    goal_reward=GOAL_REWARD,
+                    wall_reward=WALL_REWARD,
+                )
+
             # ゴールの場合、現在の状態, 行動, 次の状態, 即時報酬, エピソードの終了状態を格納してループを抜ける
             if reward == GOAL_REWARD:
                 break
@@ -127,68 +166,50 @@ def main(
             else:
                 current_state = new_state
 
-            # モデルを学習
-            if len(replay_buffer) >= BATCH_SIZE:
-                count += 1
-                train_rl(
-                    device=device,
-                    model=model,
-                    target_model=target_model,
-                    optimizer=optimizer,
-                    replay_buffer=replay_buffer,
-                    actions_list=ACTIONS,
-                    batch_size=BATCH_SIZE,
-                    gamma=0.99,
-                )
-
-            # ターゲットネットワーク更新 (一定ステップごと)
-            if global_step_count % TARGET_UPDATE_FREQ == 0:
-                target_model.load_state_dict(model.state_dict())
-
-        # 評価
-        evaluate_model(
-            count=count,
-            env=ENV,
-            actions_list=ACTIONS,
-            model=model,
-            device=device,
-            goal_reward=GOAL_REWARD,
-            wall_reward=WALL_REWARD,
-        )
+        # episodeごとにepsilonを減衰
+        epsilon = max(epsilon * EPSILON_DECAY, MIN_EPSILON)
 
 
 if __name__ == "__main__":
 
-    # 設定ファイルを読み込み
-    with open("config/base.yaml", "r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
-
-    # 環境を定義
+    # --- 環境を定義 ---
+    with open("config/env.yaml", "r", encoding="utf-8") as file:
+        env_config = yaml.safe_load(file)
     ENV = EnvRanks()
-    GOAL_REWARD: int = config["env"]["goal_reward"]
-    WALL_REWARD: int = config["env"]["wall_reward"]
+    GOAL_REWARD: int = env_config["env"]["goal_reward"]
+    WALL_REWARD: int = env_config["env"]["wall_reward"]
 
-    # 行動リストを定義
-    ACTIONS: List[str] = config["actions"]
+    # --- 行動リストを定義 ---
+    with open("config/actions.yaml", "r", encoding="utf-8") as file:
+        action_config = yaml.safe_load(file)
+    ACTIONS: List[str] = action_config["actions"]
 
-    # エピソードの回数（=学習回数）を定義
-    MAX_EPISODE_SIZE: int = config["learning"]["max_episode_size"]
+    # --- 学習設定を定義 ---
+    with open("config/learning_dqn.yaml", "r", encoding="utf-8") as file:
+        lr_config = yaml.safe_load(file)
 
-    # 試行の打ち切り回数を定義
-    MAX_STEP: int = config["learning"]["max_step"]
+    MAX_EPISODE_SIZE: int = lr_config["learning"]["max_episode_size"]  # エピソードの回数
+    MAX_STEP: int = lr_config["learning"]["max_step"]  # 試行の打ち切り回数
+    BATCH_SIZE: int = lr_config["learning"]["batch_size"]  # バッチサイズ
+    TARGET_UPDATE_FREQ = lr_config["learning"]["target_update_freq"]  # ターゲットモデルの更新頻度
+    LEARNING_RATE: float = float(
+        lr_config["learning"]["learning_rate"]
+    )  # optimizerの学習率
 
-    # バッチサイズを定義
-    BATCH_SIZE: int = 32
-
-    # ターゲットモデルの更新頻度を定義
-    TARGET_UPDATE_FREQ = 10
+    # --- epsilonの減衰を定義 ---
+    EPSILON_DECAY = 0.95  # 1エピソードごとのepsilonの減衰率
+    MIN_EPSILON = 0.1  # epsilonの最小値
 
     # gpuかcpuを使用。
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # NNモデルを別ファイルから呼び出し
+    # NNモデルを設定
     model = SimpleDQN(input_dim=2, output_dim=len(ACTIONS)).to(device)
     target_model = SimpleDQN(input_dim=2, output_dim=len(ACTIONS)).to(device)
+    target_model.eval()  # ターゲットはずっと評価モード
+
+    # optimizerの定義
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     # 重みの読み込み元 兼 保存先を定義
     WEIGHTS_PATH = "weights/simple_dqn.pth"
@@ -196,12 +217,6 @@ if __name__ == "__main__":
     # 重みをロード
     # if os.path.exists(WEIGHTS_PATH):
     #    model.load_state_dict(torch.load(WEIGHTS_PATH))
-
-    # 学習率を定義
-    learning_rate = 1e-3
-
-    # optimizer(SGD: θ-lr * Δθ)の定義
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # DeepQlearningの実施
     main(model=model, target_model=target_model, device=device, optimizer=optimizer)

@@ -85,20 +85,20 @@ def evaluate_model(
         next_state: Tuple[int, int] = rank_dynamics.get_new_state(state, action)
         r: int = env.reward_func(next_state)
 
+        path_through.append(next_state)
+
         # ゴールに到達した場合
         if r == goal_reward:
-            path_through.append(next_state)
             print(f"学習回数: {count}回, 成功!")
             print(f"経路：{path_through}")
             return
         # 壁で停止した場合
         elif r == wall_reward:
-            print(f"学習回数: {count}回, 失敗...")
+            print(f"学習回数: {count}回, 失敗..., 経路：{path_through}")
             return
         # 進む
         else:
-            path_through.append(next_state)
             state = next_state
 
     # 上記のいずれでも終了しなかった場合（未到達）
-    print(f"学習回数: {count}回, 未到達（50ステップ経過）")
+    print(f"学習回数: {count}回, 未到達（50ステップ経過）, 経路：{path_through}")

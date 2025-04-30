@@ -3,6 +3,7 @@ from typing import List, Tuple
 from src.dqn.types.statictype import ExperienceDQN
 from src.dqn.core.replaybuffer import ReplayBuffer
 from src.dqn.models.simpleDQN import SimpleDQN
+from torch.utils.tensorboard.writer import SummaryWriter
 
 
 def experiences_to_tensor(
@@ -173,7 +174,9 @@ def train_rl(
     replay_buffer: ReplayBuffer,
     actions_list: List[str],  # actions を引数で受け取る
     batch_size: int,
+    writer: SummaryWriter,
     gamma: float = 0.99,
+    global_step: int = 0,
 ):
     """
     深層強化学習の学習用関数
@@ -216,3 +219,10 @@ def train_rl(
 
     # 重みを更新
     optimizer.step()
+
+    if writer:  # 👈 TensorBoardを使うために追加
+        writer.add_scalar("Loss/train", loss.item(), global_step)
+
+    if global_step % 100 == 0:
+        loss = loss.item()
+        print(f"loss: {loss:.7f} count: {global_step: 5d}")
