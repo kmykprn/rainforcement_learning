@@ -16,19 +16,20 @@ poetry install
 各ディレクトリに train.py が格納されており、以下のように実行すると学習が始まる。
 ```
 cd reinforcement_learning
-poetry run python 03_Qlearning/train.py
+poetry run python src/Qlearning.py
 ```
 
 ### 各ディレクトリの説明：
-- 01_MDP: マルコフ決定過程の実装
-- 02_MonteCarlo: モンテカルロ法の実装
-- 03_Qlearning: Qlearningの実装
-- 04_SARSA: SARSAの実装
-- 05_ActorCritic: ActorCriticの実装
+- src/MDP: マルコフ決定過程の実装
+- src/MonteCarlo: モンテカルロ法の実装
+- src/Qlearning: Qlearningの実装
+- src/SARSA: SARSAの実装
+- src/ActorCritic: ActorCriticの実装
+- src/DQN.py: DQNの実装
+- src/DoubleDQN.py: Double DQNの実装
 - config: 学習回数などのハイパーパラメータを格納
-- core: 強化学習のコア処理（ポリシー、環境など）を格納
-- utils: 上記以外の共通処理を格納
-
+- src/rl/core: 強化学習のコア処理（ポリシー、環境など）を格納
+- src/rl/utils: 上記以外の共通処理を格納
 
 ### Double DQNの要点
 ```
